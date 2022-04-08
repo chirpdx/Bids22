@@ -61,7 +61,51 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 
 logic unlock_recognized; // Lock Flag
 
-typedef enum logic[2:0]{Unlock,Lock,Result}state;
+function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
+	//	corner cases should we covered
+    if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt)
+			begin
+				err=3'b101; // Duplicate
+			end
+	else
+	begin
+		if(X_bidAmt > Y_bidAmt && X_bidAmt > Z_bidAmt)
+        begin
+        	maxBid=X_bidAmt;
+			X_win=1;
+        end
+	end
+
+	if(Y_bidAmt == X_bidAmt || Y_bidAmt==Z_bidAmt)
+			begin
+				err=3'b101; // Duplicate
+			end
+    else
+	begin
+		if(Y_bidAmt > X_bidAmt && Y_bidAmt > Z_bidAmt)
+        begin
+			
+        maxBid=Y_bidAmt;
+		Y_win=1;
+        end
+	end
+
+	if(Z_bidAmt == X_bidAmt || Y_bidAmt==Z_bidAmt)
+			begin
+				err=3'b101; // Duplicate
+			end
+    else
+	begin
+		if(Z_bidAmt > X_bidAmt && Z_bidAmt > Y_bidAmt)
+        begin
+        maxBid=Y_bidAmt;
+		Y_win=1;
+        end
+	end
+
+endfunction
+
+typedef enum logic[2:0]{Unlock,Lock,Result} state;
 state present_state, next_state;
 
 always_ff@(posedge clk)
@@ -110,7 +154,7 @@ begin
 	begin
 		ready <= 1'b1;
 		case(present_state)
-			Unclock:  
+			Unlock:  
 				begin
 					if(C_op == 0)
 					begin
@@ -132,7 +176,8 @@ begin
 					else if(C_op == 2)
 					begin
 						key <= C_data;
-						unlock_recognized <= 1'b1;   //needs to check if this works--going to lock
+						next_state<=Lock;  //needs to check if this works--going to lock
+
 					end
 					else if(C_op == 3)
 					begin
@@ -167,6 +212,7 @@ begin
 					begin
 						
 						if(mask[2] == 1 && X_bid == 1)
+						//ack signal
 							if((xtemp - X_bidAmt - bid_cost) >= 0)
 							begin
 								xcurr <= X_bidAmt;
@@ -181,10 +227,12 @@ begin
 							xcurr <= xcurr;
 						else if(mask[2] == 0 && X_bid == 1)
 						begin
-							X_err <= 2'b11;
+							X_err = 2'b11;
+							xcurr=2'b00;
 						end
 						else
-							X_err <= 2'b00;   // does it require xcurr also
+							X_err= 2'b00; 
+							xcurr=2'b00;  // does it require xcurr also
 						
 						if(mask[1] == 1 && Y_bid == 1)
 							if((ytemp - Y_bidAmt - bid_cost) >= 0)
@@ -201,8 +249,10 @@ begin
 							ycurr <= ycurr;
 						else if(mask[1] == 0 && Y_bid == 1)
 							Y_err <= 2'b11;
+							ycurr=2'b00;
 						else
 							Y_err <= 2'b00;
+							ycurr=2'b00;
 						
 						if(Z_bid == 1)
 							if((ztemp - Z_bidAmt - bid_cost) >= 0)
@@ -219,14 +269,36 @@ begin
 							zcurr <= zcurr;
 						else if(mask[0] == 0 && Z_bid == 1)
 							Z_err <= 2'b11;
+							zcurr=2'b00;
 						else
 							Z_err <= 2'b00;
+							zcurr=2'b00;
+					end
+					else
+					begin
+						next_state=Result;
+
+						if(X_bid==1 || X_retract==1)  // Round inactive
+							X_err=2'b01;
+						else
+							X_err=X_err;
+
+						if(Y_bid==1 || Y_retract==1)
+							Y_err=2'b01;
+						else
+							Y_err=Y_err;
+
+						if(Z_bid==1 || Z_retract==1)
+							Z_err=2'b01;
+						else
+							Z_err=Z_err;
+					end
+						
 				end
 			Result:
 				begin
-
-				//comparison
-
+				roundOver=1;
+				max(xcurr,ycurr,zcurr);
 				end
 			default_case=Unlock;
 		endcase
@@ -236,3 +308,12 @@ end
 
 endmodule: bids22
 	
+//max function
+//retract functionality
+//Timer- task - When in Lock state or Result state, trying to Unlock, 
+//All invalid operations, if we try to unlock when c_start==1 ,we should get a invalid operations
+//Key does not match with c_data- Bad key
+//interface
+//All ack pending
+//bids either recieve an ack or err
+//Balance of x,y,z, it should we given in Result
