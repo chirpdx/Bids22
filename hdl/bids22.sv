@@ -61,7 +61,27 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 
 logic unlock_recognized; // Lock Flag
 
+typedef enum logic[2:0]{Unlock,Lock,Result}state;
+state present_state, next_state;
+
 always_ff@(posedge clk)
+begin
+	if(reset_n==0)
+		begin
+			present_state<=Unlock;
+		end
+	else
+	begin
+		if(c_start==0)
+			begin
+				present_state<=Result; //if c_start becomes zero then you will go to result state
+			end
+		present_state<=next_state;
+	
+	end
+end
+
+always_comb
 begin
 	if(reset_n == 0)
 	begin
@@ -86,126 +106,133 @@ begin
 		maxBid <= '0;
 		roundOver <= '0;
 	end
-else
-	ready <= 1'b1;
-	if(unlock_recognized == 1)  // Unlock state
+	else
 	begin
-		if(C_op == 0)
-		begin
-			key <= key;
-			X_value <= X_value;
-			Y_value <= Y_value;
-			Z_value <= Z_value;
-			xtemp <= X_value;
-			ytemp <= X_value;
-			ztemp <= X_value;
-			mask <= mask;
-			bid_cost <= bid_cost;
-			timer <= timer;
-		end
-		else if(C_op == 1)
-		begin
-			err <= 3'b010; //already unlocked
-		end
-		else if(C_op == 2)
-		begin
-			key <= C_data;
-			unlock_recognized <= 1'b1;   //needs to check if this works--going to lock
-		end
-		else if(C_op == 3)
-		begin
-			X_value <= C_data;
-			xtemp <= C_data;
-		end
-		else if(C_op == 4)
-		begin
-			Y_value <= C_data;
-			ytemp <= C_data;
-		end
-		else if(C_op == 5)
-		begin
-			Z_value <= C_data;
-			ztemp <= C_data;
-		end
-		else if(C_op == 6)
-			mask <= C_data[2:0];
-		else if(C_op == 7)
-			timer <= C_data;
-		else if(C_op == 8)
-			bid_cost <= C_data;
-		else
-			err <= 100; // invalid operation
-		if(C_start)
-			err<= 011; // cannot assert c_start when unlocked
-	
-	end
-	else if(unlock_recognized == 0) // Lock state
-	begin
-		if(C_start == 1)	// round start
-		begin
+		ready <= 1'b1;
+		case(present_state)
+			Unclock:  
+				begin
+					if(C_op == 0)
+					begin
+						key <= key;
+						X_value <= X_value;
+						Y_value <= Y_value;
+						Z_value <= Z_value;
+						xtemp <= X_value;
+						ytemp <= X_value;
+						ztemp <= X_value;
+						mask <= mask;
+						bid_cost <= bid_cost;
+						timer <= timer;
+					end
+					else if(C_op == 1)
+					begin
+						err <= 3'b010; //already unlocked
+					end
+					else if(C_op == 2)
+					begin
+						key <= C_data;
+						unlock_recognized <= 1'b1;   //needs to check if this works--going to lock
+					end
+					else if(C_op == 3)
+					begin
+						X_value <= C_data;
+						xtemp <= C_data;
+					end
+					else if(C_op == 4)
+					begin
+						Y_value <= C_data;
+						ytemp <= C_data;
+					end
+					else if(C_op == 5)
+					begin
+						Z_value <= C_data;
+						ztemp <= C_data;
+					end
+					else if(C_op == 6)
+						mask <= C_data[2:0];
+					else if(C_op == 7)
+						timer <= C_data;
+					else if(C_op == 8)
+						bid_cost <= C_data;
+					else
+						err <= 100; // invalid operation
+					if(C_start)
+						err<= 011; // cannot assert c_start when unlocked
 			
-			if(mask[2] == 1 && X_bid == 1)
-				if((xtemp - X_bidAmt - bid_cost) >= 0)
-				begin
-					xcurr <= X_bidAmt;
-					xtemp <= xtemp - bid_cost;
 				end
-				else
+			Lock:
 				begin
-					X_err <= 2'b10;		//insufficient funds
-					xtemp <= xtemp - bid_cost;		// confirm whether required
+					if(C_start == 1)	// round start
+					begin
+						
+						if(mask[2] == 1 && X_bid == 1)
+							if((xtemp - X_bidAmt - bid_cost) >= 0)
+							begin
+								xcurr <= X_bidAmt;
+								xtemp <= xtemp - bid_cost;
+							end
+							else
+							begin
+								X_err <= 2'b10;		//insufficient funds
+								xtemp <= xtemp - bid_cost;		// confirm whether required
+							end
+						else if(mask[2] == 1 && X_bid == 0)
+							xcurr <= xcurr;
+						else if(mask[2] == 0 && X_bid == 1)
+						begin
+							X_err <= 2'b11;
+						end
+						else
+							X_err <= 2'b00;   // does it require xcurr also
+						
+						if(mask[1] == 1 && Y_bid == 1)
+							if((ytemp - Y_bidAmt - bid_cost) >= 0)
+							begin
+								ycurr <= Y_bidAmt;
+								ytemp <= ytemp - bid_cost;
+							end
+							else
+							begin
+								Y_err <= 2'b10;		//insufficient funds
+								ytemp <= ytemp - bid_cost;
+							end
+						else if(mask[1] == 1 && Y_bid == 0)
+							ycurr <= ycurr;
+						else if(mask[1] == 0 && Y_bid == 1)
+							Y_err <= 2'b11;
+						else
+							Y_err <= 2'b00;
+						
+						if(Z_bid == 1)
+							if((ztemp - Z_bidAmt - bid_cost) >= 0)
+							begin
+								zcurr <= Z_bidAmt;
+								ztemp <= ztemp - bid_cost;
+							end
+							else
+							begin
+								Z_err <= 2'b10;		//insufficient funds
+								ztemp <= ztemp - bid_cost;
+							end
+						else if(mask[0] == 1 && Z_bid == 0)
+							zcurr <= zcurr;
+						else if(mask[0] == 0 && Z_bid == 1)
+							Z_err <= 2'b11;
+						else
+							Z_err <= 2'b00;
 				end
-			else if(mask[2] == 1 && X_bid == 0)
-				xcurr <= xcurr;
-			else if(mask[2] == 0 && X_bid == 1)
-			begin
-				X_err <= 2'b11;
-			end
-			else
-				X_err <= 2'b00;   // does it require xcurr also
-			
-			if(mask[1] == 1 && Y_bid == 1)
-				if((ytemp - Y_bidAmt - bid_cost) >= 0)
+			Result:
 				begin
-					ycurr <= Y_bidAmt;
-					ytemp <= ytemp - bid_cost;
+
+				//comparison
+
 				end
-				else
-				begin
-					Y_err <= 2'b10;		//insufficient funds
-					ytemp <= ytemp - bid_cost;
-				end
-			else if(mask[1] == 1 && Y_bid == 0)
-				ycurr <= ycurr;
-			else if(mask[1] == 0 && Y_bid == 1)
-				Y_err <= 2'b11;
-			else
-				Y_err <= 2'b00;
-			
-			if(Z_bid == 1)
-				if((ztemp - Z_bidAmt - bid_cost) >= 0)
-				begin
-					zcurr <= Z_bidAmt;
-					ztemp <= ztemp - bid_cost;
-				end
-				else
-				begin
-					Z_err <= 2'b10;		//insufficient funds
-					ztemp <= ztemp - bid_cost;
-				end
-			else if(mask[0] == 1 && Z_bid == 0)
-				zcurr <= zcurr;
-			else if(mask[0] == 0 && Z_bid == 1)
-				Z_err <= 2'b11;
-			else
-				Z_err <= 2'b00;
-//if c_start becomes zero then you will go to result state
-		end
-			
+			default_case=Unlock;
+		endcase
 	end
 
 end
-
 
 endmodule: bids22
 	
