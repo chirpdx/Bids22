@@ -77,7 +77,7 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 
 logic unlock_recognized; // Lock Flag
 
-function max(input logic [15:0] bid.X_bidAmt, input logic [15:0] bid.Y_bidAmt,input logic [15:0] bid.Z_bidAmt);
+function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
 	//	corner cases should we covered
     if(bid.X_bidAmt == bid.Y_bidAmt || bid.X_bidAmt==bid.Z_bidAmt || bid.Y_bidAmt==bid.Z_bidAmt)
 	begin
@@ -148,7 +148,7 @@ begin
 	end
 	else
 	begin
-		ready = 1'b1;
+		bid.ready = 1'b1;
 		case(present_state)
 			Unlock:  
 				begin
