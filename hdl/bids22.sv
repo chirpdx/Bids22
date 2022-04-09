@@ -8,7 +8,6 @@
 //
 ////////////////////////////////////////////////////////////////
 /*Queries and understanding::
-
 Start timer when incorrect key is given, but where is the other use of timer? Does, 
 Note: Timer is always active, but the inptopcode, is used for setting/updating the timer value.
 So, what should be default value of timer?
@@ -16,7 +15,6 @@ So, what should be default value of timer?
 // ack should be high when error occurs or not.
 Error is still there, and we give xbid, in this case xack should not be given
 Note: err are 2 bits
-
 */
 module bids22(clk, reset_n, X_bidAmt, X_bid, X_retract,
 							Y_bidAmt, Y_bid, Y_retract,
@@ -105,7 +103,7 @@ function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logi
 
 endfunction
 
-typedef enum logic[2:0]{Unlock,Lock,Result} state;
+typedef enum logic[2:0]{Unlock,Lock,Result}state;
 state present_state, next_state;
 
 always_ff@(posedge clk)
@@ -292,8 +290,7 @@ begin
 							Z_err=2'b01;
 						else
 							Z_err=Z_err;
-					end
-						
+					end						
 				end
 			Result:
 				begin
@@ -305,9 +302,7 @@ begin
 	end
 
 end
-
 endmodule: bids22
-	
 //max function
 //retract functionality
 //Timer- task - When in Lock state or Result state, trying to Unlock, 
