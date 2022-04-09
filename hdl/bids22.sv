@@ -62,7 +62,7 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 logic unlock_recognized; // Lock Flag
 
 function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
-	//	corner cases should we covered
+	//	Checking for duplicate bids
     if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt || Y_bidAmt==Z_bidAmt)
 	begin
 		err=3'b101; // Duplicate
@@ -85,7 +85,7 @@ function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logi
 
 endfunction
 
-typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt} state;
+typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, default_case} state;
 state present_state, next_state;
 
 always_ff@(posedge clk)
@@ -96,7 +96,7 @@ begin
 		end
 	else
 	begin
-		if(c_start==0)
+		if(C_start==0)
 			begin
 				present_state<=ResultSt; //if c_start becomes zero then you will go to result state
 			end
@@ -133,10 +133,11 @@ begin
 	else
 	begin
 		ready = 1'b1;
+		roundOver = 0;
 		case(present_state)
 			Unlock:  
 				begin
-					if(C_op == 0)
+					if(C_op == NoOp)
 					begin
 						key <= key;
 						X_value <= X_value;
@@ -149,36 +150,35 @@ begin
 						bid_cost <= bid_cost;
 						timer <= timer;
 					end
-					else if(C_op == 1)
+					else if(C_op == Unlock)
 					begin
 						err <= 3'b010; //already unlocked
 					end
-					else if(C_op == 2)
+					else if(C_op == Lock)
 					begin
 						key <= C_data;
 						next_state<=LockSt;  //needs to check if this works--going to lock
-
 					end
-					else if(C_op == 3)
+					else if(C_op == LoadX)
 					begin
 						X_value <= C_data;
 						xtemp <= C_data;
 					end
-					else if(C_op == 4)
+					else if(C_op == LoadY)
 					begin
 						Y_value <= C_data;
 						ytemp <= C_data;
 					end
-					else if(C_op == 5)
+					else if(C_op == LoadZ)
 					begin
 						Z_value <= C_data;
 						ztemp <= C_data;
 					end
-					else if(C_op == 6)
+					else if(C_op == SetXYZmask)
 						mask <= C_data[2:0];
-					else if(C_op == 7)
+					else if(C_op == SetTimer)
 						timer <= C_data;
-					else if(C_op == 8)
+					else if(C_op == BidCharge)
 						bid_cost <= C_data;
 					else
 						err <= 100; // invalid operation
@@ -190,73 +190,101 @@ begin
 				begin
 					if(C_start == 1)	// round start
 					begin
-						
-						if(mask[2] == 1 && X_bid == 1)
+						if(mask[0] == 1 && X_bid == 1)
 						//ack signal
 							if((xtemp - X_bidAmt - bid_cost) >= 0)
 							begin
-								xcurr <= X_bidAmt;
-								xtemp <= xtemp - bid_cost;
+								xcurr = X_bidAmt;
+								xtemp = xtemp - bid_cost;
+								X_ack = 1;
 							end
 							else
 							begin
-								X_err <= 2'b10;		//insufficient funds
-								xtemp <= xtemp - bid_cost;		// confirm whether required
+								X_err = 2'b10;		//insufficient funds
+								xtemp = xtemp - bid_cost;		// deducting bidcost
+								X_ack = 0;
 							end
-						else if(mask[2] == 1 && X_bid == 0)
-							xcurr <= xcurr;
-						else if(mask[2] == 0 && X_bid == 1)
+						else if(mask[0] == 1 && X_bid == 0)
+							xcurr = xcurr;
+						else if(mask[0] == 0 && X_bid == 1)
 						begin
 							X_err = 2'b11;
-							xcurr=2'b00;
+							xcurr = 2'b00;
+							X_ack = 0;
 						end
 						else
+						begin
 							X_err= 2'b00; 
-							xcurr=2'b00;  // does it require xcurr also
+							xcurr = 2'b00;
+							X_ack = 0;
+						end
 						
 						if(mask[1] == 1 && Y_bid == 1)
 							if((ytemp - Y_bidAmt - bid_cost) >= 0)
 							begin
-								ycurr <= Y_bidAmt;
-								ytemp <= ytemp - bid_cost;
+								ycurr = Y_bidAmt;
+								ytemp = ytemp - bid_cost;
+								Y_ack = 1;
 							end
 							else
 							begin
-								Y_err <= 2'b10;		//insufficient funds
-								ytemp <= ytemp - bid_cost;
+								ytemp = ytemp - bid_cost;
+								Y_err = 2'b10;		//insufficient funds
+								Y_ack = 0;
 							end
 						else if(mask[1] == 1 && Y_bid == 0)
-							ycurr <= ycurr;
+							ycurr = ycurr;
 						else if(mask[1] == 0 && Y_bid == 1)
-							Y_err <= 2'b11;
-							ycurr=2'b00;
+						begin
+							Y_err = 2'b11;
+							ycurr = 2'b00;
+							Y_ack = 0;
+						end
 						else
-							Y_err <= 2'b00;
-							ycurr=2'b00;
+						begin
+							Y_err = 2'b00;
+							ycurr = 2'b00;
+							Y_ack = 0;
+						end
 						
-						if(Z_bid == 1)
+						if(mask[2] == 1 && Z_bid == 1)
 							if((ztemp - Z_bidAmt - bid_cost) >= 0)
 							begin
-								zcurr <= Z_bidAmt;
-								ztemp <= ztemp - bid_cost;
+								zcurr = Z_bidAmt;
+								ztemp = ztemp - bid_cost;
+								Z_ack = 1;
 							end
 							else
 							begin
-								Z_err <= 2'b10;		//insufficient funds
-								ztemp <= ztemp - bid_cost;
+								Z_err = 2'b10;		//insufficient funds
+								ztemp = ztemp - bid_cost;
+								Z_ack = 0;
 							end
-						else if(mask[0] == 1 && Z_bid == 0)
-							zcurr <= zcurr;
-						else if(mask[0] == 0 && Z_bid == 1)
-							Z_err <= 2'b11;
-							zcurr=2'b00;
+						else if(mask[2] == 1 && Z_bid == 0)
+							zcurr = zcurr;
+						else if(mask[2] == 0 && Z_bid == 1)
+						begin
+							Z_err = 2'b11;
+							zcurr = 2'b00;
+							Z_ack = 0;
+						end
 						else
-							Z_err <= 2'b00;
-							zcurr=2'b00;
+						begin
+							Z_err = 2'b00;
+							zcurr = 2'b00;
+							Z_ack = 0;
+						end
+
+						if(X_retract)
+							xcurr = '0;
+						if(Y_retract)
+							ycurr = '0;
+						if(Z_retract)
+							zcurr = '0;
 					end
-					else
+					else		// C_start == 0
 					begin
-						next_state=Result;
+						next_state = ResultSt;
 
 						if(X_bid==1 || X_retract==1)  // Round inactive
 							X_err=2'b01;
@@ -275,25 +303,21 @@ begin
 					end
 						
 				end
-			Result:
+			ResultSt:
 				begin
-				roundOver=1;
+				roundOver = 1;
 				max(xcurr,ycurr,zcurr);
 				end
-			default_case=UnlockSt;
+			default_case: next_state = UnlockSt;
 		endcase
 	end
 
 end
 
 endmodule: bids22
-	
-//max function
-//retract functionality
+
 //Timer- task - When in Lock state or Result state, trying to Unlock, 
 //All invalid operations, if we try to unlock when c_start==1 ,we should get a invalid operations
 //Key does not match with c_data- Bad key
-//interface
-//All ack pending
 //bids either recieve an ack or err
 //Balance of x,y,z, it should we given in Result
