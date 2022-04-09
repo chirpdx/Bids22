@@ -9,7 +9,6 @@
 ////////////////////////////////////////////////////////////////
 
 interface bids22(input logic clk,reset_n);
-	logic clk, reset_n;
 	logic X_bid, Y_bid, Z_bid, X_retract, Y_retract, Z_retract, C_start;
 	logic [15:0] X_bidAmt, Y_bidAmt, Z_bidAmt;
 	logic [31:0] C_data;
@@ -41,11 +40,11 @@ interface bids22(input logic clk,reset_n);
 		output Z_ack, 
 		output Z_win, 
 		output ready, 
-		output roundOver;
+		output roundOver,
 		output X_err, 
 		output Y_err, 
 		output Z_err, 
-		output err;
+		output err,
 		output X_balance, 
 		output Y_balance, 
 		output Z_balance,
@@ -102,11 +101,7 @@ function max(input logic [15:0] bid.X_bidAmt, input logic [15:0] bid.Y_bidAmt,in
 
 endfunction
 
-<<<<<<< HEAD
-typedef enum logic[2:0]{Unlock,Lock,Result}state;
-=======
 typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt} state;
->>>>>>> 92f53b653080be08dd8dcd14e9f8842cb4fd17c9
 state present_state, next_state;
 
 always_ff@(posedge bid.clk)
@@ -142,9 +137,9 @@ begin
 		{xtemp, ytemp, ztemp} <= '0;
 		{xcurr, ycurr, zcurr} <= '0;
 
-		ready <= 1'b0;
+		bid.ready <= 1'b0;
 		{bid.X_win, bid.Y_win, bid.Z_win} <= '0;
-		err <= '0;
+		bid.err <= '0;
 		{bid.X_ack, bid.Y_ack, bid.Z_ack} <= 0;
 		{bid.X_balance, bid.Y_balance, bid.Z_balance} <= '0;
 		{bid.X_err, bid.Y_err, bid.Z_err} <= '0;
