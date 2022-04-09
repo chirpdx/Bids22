@@ -8,7 +8,7 @@
 //
 ////////////////////////////////////////////////////////////////
 
-interface bids22(input logic clk,reset_n);
+interface bids22inf(input logic clk,reset_n);
 	logic X_bid, Y_bid, Z_bid, X_retract, Y_retract, Z_retract, C_start;
 	logic [15:0] X_bidAmt, Y_bidAmt, Z_bidAmt;
 	logic [31:0] C_data;
@@ -52,7 +52,7 @@ interface bids22(input logic clk,reset_n);
 
 endinterface
 
-module bids22(bids22.bids22arch bid);
+module bids22(bids22inf.bids22arch bid);
 	parameter integer unlock_key = 33'h0F0F0F0F;
 	
 // Internal Registers
@@ -200,7 +200,7 @@ begin
 						bid_cost <= bid.C_data;
 					else
 						bid.err <= 100; // invalid operation
-					if(C_start)
+					if(bid.C_start)
 						bid.err<= 011; // cannot assert c_start when unlocked
 			
 				end
