@@ -78,7 +78,8 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 logic unlock_recognized; // Lock Flag
 
 function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
-	//	corner cases should we covered
+
+	//	Checking for duplicate bids
     if(bid.X_bidAmt == bid.Y_bidAmt || bid.X_bidAmt==bid.Z_bidAmt || bid.Y_bidAmt==bid.Z_bidAmt)
 	begin
 		bid.err=3'b101; // Duplicate
@@ -101,7 +102,7 @@ function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logi
 
 endfunction
 
-typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt} state;
+typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, default_case} state;
 state present_state, next_state;
 
 always_ff@(posedge bid.clk)
@@ -112,6 +113,7 @@ begin
 		end
 	else
 	begin
+
 		if(bid.c_start==0)
 			begin
 				present_state<=ResultSt; //if c_start becomes zero then you will go to result state
@@ -149,10 +151,11 @@ begin
 	else
 	begin
 		bid.ready = 1'b1;
+ 		bid.roundOver = 0;
 		case(present_state)
-			Unlock:  
+			UnlockSt:  
 				begin
-					if(bid.C_op == 0)
+					if(bid.C_op == NoOp)
 					begin
 						key <= key;
 						X_value <= X_value;
@@ -165,36 +168,35 @@ begin
 						bid_cost <= bid_cost;
 						timer <= timer;
 					end
-					else if(bid.C_op == 1)
+					else if(bid.C_op == Unlock)
 					begin
 						bid.err <= 3'b010; //already unlocked
 					end
-					else if(bid.C_op == 2)
+					else if(bid.C_op == Lock)
 					begin
 						key <= bid.C_data;
 						next_state<=LockSt;  //needs to check if this works--going to lock
-
 					end
-					else if(bid.C_op == 3)
+					else if(bid.C_op == LoadX)
 					begin
 						X_value <= bid.C_data;
 						xtemp <= bid.C_data;
 					end
-					else if(bid.C_op == 4)
+					else if(bid.C_op == LoadY)
 					begin
 						Y_value <= bid.C_data;
 						ytemp <= bid.C_data;
 					end
-					else if(bid.C_op == 5)
+					else if(bid.C_op == LoadZ)
 					begin
 						Z_value <= bid.C_data;
 						ztemp <= bid.C_data;
 					end
-					else if(bid.C_op == 6)
+					else if(bid.C_op == SetXYZmask)
 						mask <= bid.C_data[2:0];
-					else if(bid.C_op == 7)
+					else if(bid.C_op == SetTimer)
 						timer <= bid.C_data;
-					else if(bid.C_op == 8)
+					else if(bid.C_op == BidCharge)
 						bid_cost <= bid.C_data;
 					else
 						bid.err <= 100; // invalid operation
@@ -202,77 +204,102 @@ begin
 						bid.err<= 011; // cannot assert c_start when unlocked
 			
 				end
-			Lock:
+			LockSt:
 				begin
 					if(bid.C_start == 1)	// round start
 					begin
-						
-						if(mask[2] == 1 && bid.X_bid == 1)
-						//ack signal
+              if(mask[0] == 1 && bid.X_bid == 1)
 							if((xtemp - bid.X_bidAmt - bid_cost) >= 0)
 							begin
 								xcurr <= bid.X_bidAmt;
 								xtemp <= xtemp - bid_cost;
+                bid.X_ack = 1;
 							end
 							else
 							begin
 								bid.X_err <= 2'b10;		//insufficient funds
-								xtemp <= xtemp - bid_cost;		// confirm whether required
+								xtemp <= xtemp - bid_cost;
+                bid.X_ack = 0;
 							end
-						else if(mask[2] == 1 && bid.X_bid == 0)
+          else if(mask[0] == 1 && bid.X_bid == 0)
 							xcurr <= xcurr;
-						else if(mask[2] == 0 && bid.X_bid == 1)
+          else if(mask[0] == 0 && bid.X_bid == 1)
 						begin
 							bid.X_err = 2'b11;
 							xcurr=2'b00;
+              bid.X_ack = 0;
 						end
 						else
 							bid.X_err= 2'b00; 
-							xcurr=2'b00;  // does it require xcurr also
+							xcurr=2'b00;
+              bid.X_ack = 0;
 						
 						if(mask[1] == 1 && bid.Y_bid == 1)
 							if((ytemp - bid.Y_bidAmt - bid_cost) >= 0)
 							begin
 								ycurr <= bid.Y_bidAmt;
 								ytemp <= ytemp - bid_cost;
+                bid.Y_ack = 1;
 							end
 							else
 							begin
-								Y_err <= 2'b10;		//insufficient funds
-								ytemp <= ytemp - bid_cost;
+								ytemp = ytemp - bid_cost;
+								bid.Y_err = 2'b10;		//insufficient funds
+								bid.Y_ack = 0;
 							end
 						else if(mask[1] == 1 && bid.Y_bid == 0)
-							ycurr <= ycurr;
+							ycurr = ycurr;
 						else if(mask[1] == 0 && bid.Y_bid == 1)
-							bid.Y_err <= 2'b11;
-							ycurr=2'b00;
+                        begin
+							bid.Y_err = 2'b11;
+							ycurr = 2'b00;
+                            bid.Y_ack = 0;
+                        end
 						else
+                        begin
 							bid.Y_err <= 2'b00;
 							ycurr=2'b00;
+                            bid.Y_ack = 0;
+                        end
 						
-						if(bid.Z_bid == 1)
+						if(mask[2] == 1 && bid.Z_bid == 1)
 							if((ztemp - bid.Z_bidAmt - bid_cost) >= 0)
 							begin
 								zcurr <= bid.Z_bidAmt;
 								ztemp <= ztemp - bid_cost;
+                                bid.Z_ack = 1;
 							end
 							else
 							begin
 								bid.Z_err <= 2'b10;		//insufficient funds
 								ztemp <= ztemp - bid_cost;
+                                bid.Z_ack = 0;
 							end
-						else if(mask[0] == 1 && bid.Z_bid == 0)
+						else if(mask[2] == 1 && bid.Z_bid == 0)
 							zcurr <= zcurr;
-						else if(mask[0] == 0 && bid.Z_bid == 1)
+						else if(mask[2] == 0 && bid.Z_bid == 1)
+                        begin
 							bid.Z_err <= 2'b11;
 							zcurr=2'b00;
+                            bid.Z_ack = 0;
+                        end
 						else
+                        begin
 							bid.Z_err <= 2'b00;
 							zcurr=2'b00;
+                            bid.Z_ack = 0;
+                        end
+
+                        if(bid.X_retract)
+							xcurr = '0;
+						if(bid.Y_retract)
+							ycurr = '0;
+						if(bid.Z_retract)
+							zcurr = '0;
 					end
-					else
+					else		// C_start == 0
 					begin
-						next_state=Result;
+						next_state = ResultSt;
 
 						if(bid.X_bid==1 || bid.X_retract==1)  // Round inactive
 							bid.X_err=2'b01;
@@ -290,23 +317,20 @@ begin
 							bid.Z_err=bid.Z_err;
 					end						
 				end
-			Result:
+			ResultSt:
 				begin
 				bid.roundOver=1;
 				max(xcurr,ycurr,zcurr);
 				end
-			default_case=UnlockSt;
+			default_case: next_state = UnlockSt;
 		endcase
 	end
 
 end
 endmodule: bids22
-//max function
-//retract functionality
+
 //Timer- task - When in Lock state or Result state, trying to Unlock, 
 //All invalid operations, if we try to unlock when c_start==1 ,we should get a invalid operations
 //Key does not match with c_data- Bad key
-//interface
-//All ack pending
 //bids either recieve an ack or err
 //Balance of x,y,z, it should we given in Result
