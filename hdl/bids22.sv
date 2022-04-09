@@ -61,62 +61,46 @@ logic unlock_recognized; // Lock Flag
 
 function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
 	//	corner cases should we covered
-    if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt)
-			begin
-				err=3'b101; // Duplicate
-			end
-	else
+    if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt || Y_bidAmt==Z_bidAmt)
 	begin
-		if(X_bidAmt > Y_bidAmt && X_bidAmt > Z_bidAmt)
-        begin
-        	maxBid=X_bidAmt;
-			X_win=1;
-        end
+		err=3'b101; // Duplicate
 	end
-
-	if(Y_bidAmt == X_bidAmt || Y_bidAmt==Z_bidAmt)
-			begin
-				err=3'b101; // Duplicate
-			end
-    else
-	begin
-		if(Y_bidAmt > X_bidAmt && Y_bidAmt > Z_bidAmt)
-        begin
-			
+	else if(X_bidAmt > Y_bidAmt && X_bidAmt > Z_bidAmt)
+    begin
+        maxBid=X_bidAmt;
+		X_win=1;
+    end
+	else if(Y_bidAmt > X_bidAmt && Y_bidAmt > Z_bidAmt)
+    begin
         maxBid=Y_bidAmt;
 		Y_win=1;
-        end
-	end
-
-	if(Z_bidAmt == X_bidAmt || Y_bidAmt==Z_bidAmt)
-			begin
-				err=3'b101; // Duplicate
-			end
-    else
-	begin
-		if(Z_bidAmt > X_bidAmt && Z_bidAmt > Y_bidAmt)
-        begin
-        maxBid=Y_bidAmt;
-		Y_win=1;
-        end
-	end
+    end
+	else if(Z_bidAmt > X_bidAmt && Z_bidAmt > Y_bidAmt)
+    begin
+        maxBid=Z_bidAmt;
+		Z_win=1;
+    end
 
 endfunction
 
+<<<<<<< HEAD
 typedef enum logic[2:0]{Unlock,Lock,Result}state;
+=======
+typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt} state;
+>>>>>>> 92f53b653080be08dd8dcd14e9f8842cb4fd17c9
 state present_state, next_state;
 
 always_ff@(posedge clk)
 begin
 	if(reset_n==0)
 		begin
-			present_state<=Unlock;
+			present_state<=UnlockSt;
 		end
 	else
 	begin
 		if(c_start==0)
 			begin
-				present_state<=Result; //if c_start becomes zero then you will go to result state
+				present_state<=ResultSt; //if c_start becomes zero then you will go to result state
 			end
 		present_state<=next_state;
 	
@@ -150,7 +134,7 @@ begin
 	end
 	else
 	begin
-		ready <= 1'b1;
+		ready = 1'b1;
 		case(present_state)
 			Unlock:  
 				begin
@@ -174,7 +158,7 @@ begin
 					else if(C_op == 2)
 					begin
 						key <= C_data;
-						next_state<=Lock;  //needs to check if this works--going to lock
+						next_state<=LockSt;  //needs to check if this works--going to lock
 
 					end
 					else if(C_op == 3)
@@ -297,7 +281,7 @@ begin
 				roundOver=1;
 				max(xcurr,ycurr,zcurr);
 				end
-			default_case=Unlock;
+			default_case=UnlockSt;
 		endcase
 	end
 
