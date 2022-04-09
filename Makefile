@@ -3,17 +3,9 @@
 
 sim_dir := $(shell pwd)/sim/
 source_dir := $(shell pwd)/hdl/
-#traces_dir := $(shell pwd)/traces/
-#out_dir := $(shell pwd)/outs/
 sv_files := $(shell find $(source_dir) -name 'bids22.sv')
-# -and -not -name '*shiftertb*' -or -name '*.svp')
 
 top_module = "top"
-
-#tracefile = $(traces_dir)/our_tracefiles/trace.txt
-#outfile = $(out_dir)/dram
-#plus_args := +tracefile=$(tracefile) +outfile=$(outfile)
-
 
 all: VLOG
 	cd $(sim_dir)
