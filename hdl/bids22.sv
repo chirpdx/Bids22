@@ -76,7 +76,7 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 					} Opcode;
 
 logic unlock_recognized; // Lock Flag
-
+logic downtimer;
 function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
 
 	//	Checking for duplicate bids
@@ -102,7 +102,7 @@ function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logi
 
 endfunction
 
-typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, default_case} state;
+typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, WaitSt, TimerwaitSt, default_case} state;
 state present_state, next_state;
 
 always_ff@(posedge bid.clk)
@@ -127,26 +127,27 @@ always_comb
 begin
 	if(bid.reset_n == 0)
 	begin
-		unlock_recognized <= 1;
-		X_value <= '0;
-		Y_value <= '0;
-		Z_value <= '0;
-		mask <= 3'b111;
-		timer <= 32'hF;
-		key <= '0;
-		bid_cost <= 1;
+		unlock_recognized = 1;
+		X_value = '0;
+		Y_value = '0;
+		Z_value = '0;
+		mask = 3'b111;
+		timer = 32'hF;
+		key = '0;
+		bid_cost = 1;
 
-		{xtemp, ytemp, ztemp} <= '0;
-		{xcurr, ycurr, zcurr} <= '0;
+		{xtemp, ytemp, ztemp} = '0;
+		{xcurr, ycurr, zcurr} = '0;
 
-		bid.ready <= 1'b0;
-		{bid.X_win, bid.Y_win, bid.Z_win} <= '0;
-		bid.err <= '0;
-		{bid.X_ack, bid.Y_ack, bid.Z_ack} <= 0;
-		{bid.X_balance, bid.Y_balance, bid.Z_balance} <= '0;
-		{bid.X_err, bid.Y_err, bid.Z_err} <= '0;
-		bid.maxBid <= '0;
-		bid.roundOver <= '0;
+		bid.ready = 1'b0;
+		{bid.X_win, bid.Y_win, bid.Z_win} = '0;
+		bid.err = '0;
+		{bid.X_ack, bid.Y_ack, bid.Z_ack} = 0;
+		{bid.X_balance, bid.Y_balance, bid.Z_balance} = '0;
+		{bid.X_err, bid.Y_err, bid.Z_err} = '0;
+		bid.maxBid = '0;
+		bid.roundOver = '0;
+		downtimer = '0;
 	end
 	else
 	begin
@@ -158,15 +159,15 @@ begin
 					if(bid.C_op == NoOp)
 					begin
 						key <= key;
-						X_value <= X_value;
-						Y_value <= Y_value;
-						Z_value <= Z_value;
-						xtemp <= X_value;
-						ytemp <= X_value;
-						ztemp <= X_value;
-						mask <= mask;
-						bid_cost <= bid_cost;
-						timer <= timer;
+						X_value = X_value;
+						Y_value = Y_value;
+						Z_value = Z_value;
+						xtemp = X_value;
+						ytemp = X_value;
+						ztemp = X_value;
+						mask = mask;
+						bid_cost = bid_cost;
+						timer = timer;
 					end
 					else if(bid.C_op == Unlock)
 					begin
@@ -174,34 +175,35 @@ begin
 					end
 					else if(bid.C_op == Lock)
 					begin
-						key <= bid.C_data;
-						next_state<=LockSt;  //needs to check if this works--going to lock
+						key = bid.C_data;
+						next_state = LockSt;  //needs to check if this works--going to lock
+						downtimer = timer;
 					end
 					else if(bid.C_op == LoadX)
 					begin
-						X_value <= bid.C_data;
-						xtemp <= bid.C_data;
+						X_value = bid.C_data;
+						xtemp = bid.C_data;
 					end
 					else if(bid.C_op == LoadY)
 					begin
-						Y_value <= bid.C_data;
-						ytemp <= bid.C_data;
+						Y_value = bid.C_data;
+						ytemp = bid.C_data;
 					end
 					else if(bid.C_op == LoadZ)
 					begin
-						Z_value <= bid.C_data;
-						ztemp <= bid.C_data;
+						Z_value = bid.C_data;
+						ztemp = bid.C_data;
 					end
 					else if(bid.C_op == SetXYZmask)
-						mask <= bid.C_data[2:0];
+						mask = bid.C_data[2:0];
 					else if(bid.C_op == SetTimer)
-						timer <= bid.C_data;
+						timer = bid.C_data;
 					else if(bid.C_op == BidCharge)
-						bid_cost <= bid.C_data;
+						bid_cost = bid.C_data;
 					else
-						bid.err <= 100; // invalid operation
+						bid.err = 100; // invalid operation
 					if(bid.C_start)
-						bid.err<= 011; // cannot assert c_start when unlocked
+						bid.err = 011; // cannot assert c_start when unlocked
 			
 				end
 			LockSt:
@@ -211,6 +213,7 @@ begin
               			if(mask[0] == 1 && bid.X_bid == 1)
 							if((xtemp - bid.X_bidAmt - bid_cost) >= 0)
 							begin
+<<<<<<< HEAD
 								xcurr <= bid.X_bidAmt;
 								xtemp <= xtemp - bid_cost;
                 				bid.X_ack = 1;
@@ -229,6 +232,26 @@ begin
 								xcurr=2'b00;
               					bid.X_ack = 0;
 							end
+=======
+								xcurr = bid.X_bidAmt;
+								xtemp = xtemp - bid_cost;
+                bid.X_ack = 1;
+							end
+							else
+							begin
+								bid.X_err = 2'b10;		//insufficient funds
+								xtemp = xtemp - bid_cost;
+                bid.X_ack = 0;
+							end
+          else if(mask[0] == 1 && bid.X_bid == 0)
+							xcurr = xcurr;
+          else if(mask[0] == 0 && bid.X_bid == 1)
+						begin
+							bid.X_err = 2'b11;
+							xcurr = 2'b00;
+              bid.X_ack = 0;
+						end
+>>>>>>> eacdbe645616ad6c97292b85ae8b57f755dc5b7d
 						else
 							bid.X_err= 2'b00; 
 							xcurr=2'b00;
@@ -237,9 +260,15 @@ begin
 						if(mask[1] == 1 && bid.Y_bid == 1)
 							if((ytemp - bid.Y_bidAmt - bid_cost) >= 0)
 							begin
+<<<<<<< HEAD
 								ycurr <= bid.Y_bidAmt;
 								ytemp <= ytemp - bid_cost;
                 				bid.Y_ack = 1;
+=======
+								ycurr = bid.Y_bidAmt;
+								ytemp = ytemp - bid_cost;
+                bid.Y_ack = 1;
+>>>>>>> eacdbe645616ad6c97292b85ae8b57f755dc5b7d
 							end
 							else
 							begin
@@ -257,36 +286,36 @@ begin
                         end
 						else
                         begin
-							bid.Y_err <= 2'b00;
-							ycurr=2'b00;
+							bid.Y_err = 2'b00;
+							ycurr = 2'b00;
                             bid.Y_ack = 0;
                         end
 						
 						if(mask[2] == 1 && bid.Z_bid == 1)
 							if((ztemp - bid.Z_bidAmt - bid_cost) >= 0)
 							begin
-								zcurr <= bid.Z_bidAmt;
-								ztemp <= ztemp - bid_cost;
+								zcurr = bid.Z_bidAmt;
+								ztemp = ztemp - bid_cost;
                                 bid.Z_ack = 1;
 							end
 							else
 							begin
-								bid.Z_err <= 2'b10;		//insufficient funds
-								ztemp <= ztemp - bid_cost;
+								bid.Z_err = 2'b10;		//insufficient funds
+								ztemp = ztemp - bid_cost;
                                 bid.Z_ack = 0;
 							end
 						else if(mask[2] == 1 && bid.Z_bid == 0)
-							zcurr <= zcurr;
+							zcurr = zcurr;
 						else if(mask[2] == 0 && bid.Z_bid == 1)
                         begin
-							bid.Z_err <= 2'b11;
-							zcurr=2'b00;
+							bid.Z_err = 2'b11;
+							zcurr = 2'b00;
                             bid.Z_ack = 0;
                         end
 						else
                         begin
-							bid.Z_err <= 2'b00;
-							zcurr=2'b00;
+							bid.Z_err = 2'b00;
+							zcurr = 2'b00;
                             bid.Z_ack = 0;
                         end
 
@@ -302,25 +331,53 @@ begin
 						next_state = ResultSt;
 
 						if(bid.X_bid==1 || bid.X_retract==1)  // Round inactive
-							bid.X_err=2'b01;
+							bid.X_err = 2'b01;
 						else
 							bid.X_err=bid.X_err;
 
 						if(bid.Y_bid==1 || bid.Y_retract==1)
-							bid.Y_err=2'b01;
+							bid.Y_err = 2'b01;
 						else
-							bid.Y_err=bid.Y_err;
+							bid.Y_err = bid.Y_err;
 
 						if(bid.Z_bid==1 || bid.Z_retract==1)
-							bid.Z_err=2'b01;
+							bid.Z_err = 2'b01;
 						else
-							bid.Z_err=bid.Z_err;
+							bid.Z_err = bid.Z_err;
 					end						
 				end
 			ResultSt:
 				begin
-				bid.roundOver=1;
+				bid.roundOver = 1;
 				max(xcurr,ycurr,zcurr);
+				next_state = WaitSt;
+				end
+			WaitSt:
+				begin
+				bid.roundOver = 0;
+				if(bid.C_start == 1)
+					next_state = LockSt;
+				else if(bid.C_start == 0 && bid.C_op == Unlock)
+					begin
+						if(key === bid.C_data)
+							next_state = UnlockSt;
+						else
+						begin
+							next_state = TimerwaitSt;
+							downtimer = timer;
+						end
+
+					end
+				else
+					next_state = WaitSt;
+				end
+			TimerwaitSt:
+				begin
+					downtimer = downtimer - 1;
+					if(downtimer == '0)
+						next_state = WaitSt;
+					else
+						next_state = TimerwaitSt;
 				end
 			default_case: next_state = UnlockSt;
 		endcase
