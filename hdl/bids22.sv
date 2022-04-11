@@ -208,38 +208,38 @@ begin
 				begin
 					if(bid.C_start == 1)	// round start
 					begin
-              if(mask[0] == 1 && bid.X_bid == 1)
+              			if(mask[0] == 1 && bid.X_bid == 1)
 							if((xtemp - bid.X_bidAmt - bid_cost) >= 0)
 							begin
 								xcurr <= bid.X_bidAmt;
 								xtemp <= xtemp - bid_cost;
-                bid.X_ack = 1;
+                				bid.X_ack = 1;
 							end
 							else
 							begin
 								bid.X_err <= 2'b10;		//insufficient funds
 								xtemp <= xtemp - bid_cost;
-                bid.X_ack = 0;
+                				bid.X_ack = 0;
 							end
-          else if(mask[0] == 1 && bid.X_bid == 0)
-							xcurr <= xcurr;
-          else if(mask[0] == 0 && bid.X_bid == 1)
-						begin
-							bid.X_err = 2'b11;
-							xcurr=2'b00;
-              bid.X_ack = 0;
-						end
+         					else if(mask[0] == 1 && bid.X_bid == 0)
+								xcurr <= xcurr;
+          					else if(mask[0] == 0 && bid.X_bid == 1)
+							begin
+								bid.X_err = 2'b11;
+								xcurr=2'b00;
+              					bid.X_ack = 0;
+							end
 						else
 							bid.X_err= 2'b00; 
 							xcurr=2'b00;
-              bid.X_ack = 0;
+              				bid.X_ack = 0;
 						
 						if(mask[1] == 1 && bid.Y_bid == 1)
 							if((ytemp - bid.Y_bidAmt - bid_cost) >= 0)
 							begin
 								ycurr <= bid.Y_bidAmt;
 								ytemp <= ytemp - bid_cost;
-                bid.Y_ack = 1;
+                				bid.Y_ack = 1;
 							end
 							else
 							begin
@@ -247,13 +247,13 @@ begin
 								bid.Y_err = 2'b10;		//insufficient funds
 								bid.Y_ack = 0;
 							end
-						else if(mask[1] == 1 && bid.Y_bid == 0)
-							ycurr = ycurr;
-						else if(mask[1] == 0 && bid.Y_bid == 1)
-                        begin
-							bid.Y_err = 2'b11;
-							ycurr = 2'b00;
-                            bid.Y_ack = 0;
+							else if(mask[1] == 1 && bid.Y_bid == 0)
+								ycurr = ycurr;
+							else if(mask[1] == 0 && bid.Y_bid == 1)
+                       		begin
+								bid.Y_err = 2'b11;
+								ycurr = 2'b00;
+                            	bid.Y_ack = 0;
                         end
 						else
                         begin
