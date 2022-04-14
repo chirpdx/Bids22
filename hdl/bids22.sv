@@ -3,7 +3,7 @@
 //
 // Author:	        Chirag Chaudhari (chir@pdx.edu)
 // 					Amogh Morey
-// Last Modified:	01-Apr-2022
+// Last Modified:	14-Apr-2022
 // 
 //
 ////////////////////////////////////////////////////////////////
@@ -213,45 +213,24 @@ begin
               			if(mask[0] == 1 && bid.X_bid == 1)
 							if((xtemp - bid.X_bidAmt - bid_cost) >= 0)
 							begin
-<<<<<<< HEAD
-								xcurr <= bid.X_bidAmt;
-								xtemp <= xtemp - bid_cost;
-                				bid.X_ack = 1;
-							end
-							else
-							begin
-								bid.X_err <= 2'b10;		//insufficient funds
-								xtemp <= xtemp - bid_cost;
-                				bid.X_ack = 0;
-							end
-         					else if(mask[0] == 1 && bid.X_bid == 0)
-								xcurr <= xcurr;
-          					else if(mask[0] == 0 && bid.X_bid == 1)
-							begin
-								bid.X_err = 2'b11;
-								xcurr=2'b00;
-              					bid.X_ack = 0;
-							end
-=======
 								xcurr = bid.X_bidAmt;
 								xtemp = xtemp - bid_cost;
-                bid.X_ack = 1;
+								bid.X_ack = 1;
 							end
 							else
 							begin
 								bid.X_err = 2'b10;		//insufficient funds
 								xtemp = xtemp - bid_cost;
-                bid.X_ack = 0;
+								bid.X_ack = 0;
 							end
-          else if(mask[0] == 1 && bid.X_bid == 0)
-							xcurr = xcurr;
-          else if(mask[0] == 0 && bid.X_bid == 1)
-						begin
-							bid.X_err = 2'b11;
-							xcurr = 2'b00;
-              bid.X_ack = 0;
-						end
->>>>>>> eacdbe645616ad6c97292b85ae8b57f755dc5b7d
+							else if(mask[0] == 1 && bid.X_bid == 0)
+								xcurr = xcurr;
+							else if(mask[0] == 0 && bid.X_bid == 1)
+							begin
+								bid.X_err = 2'b11;
+								xcurr = 2'b00;
+								bid.X_ack = 0;
+							end
 						else
 							bid.X_err= 2'b00; 
 							xcurr=2'b00;
@@ -260,15 +239,9 @@ begin
 						if(mask[1] == 1 && bid.Y_bid == 1)
 							if((ytemp - bid.Y_bidAmt - bid_cost) >= 0)
 							begin
-<<<<<<< HEAD
-								ycurr <= bid.Y_bidAmt;
-								ytemp <= ytemp - bid_cost;
-                				bid.Y_ack = 1;
-=======
 								ycurr = bid.Y_bidAmt;
 								ytemp = ytemp - bid_cost;
-                bid.Y_ack = 1;
->>>>>>> eacdbe645616ad6c97292b85ae8b57f755dc5b7d
+								bid.Y_ack = 1;
 							end
 							else
 							begin
