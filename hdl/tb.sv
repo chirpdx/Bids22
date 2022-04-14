@@ -1,5 +1,5 @@
 //`define DEBUG
-module top();
+module top;
 
 logic clk, reset_n;
 
@@ -7,31 +7,35 @@ localparam TRUE  = 1'b1;
 localparam FALSE = 1'b0;
 parameter CLOCK_CYCLE = 10;
 localparam CLOCK_WIDTH = CLOCK_CYCLE/2;
-parameter IDLE_CLOCKS = 5;
+parameter IDLE_CLOCKS = 50;
 
 
 
-// Instantiate FSM Module
-bids22 BIDDUV(clk, reset_n);
+// Instantiate Module
+bids22inf BusInst(.*);
+bids22 BIDDUV(BusInst);
+cgroups cgInst(.*);
+
+bids22cg1 g1;
 
 // Clock Generation of CLOCK_CYCLE Period
 initial
 begin
-	Clock = FALSE;
-	forever #CLOCK_WIDTH Clock = ~Clock;
+	clk = FALSE;
+	forever #CLOCK_WIDTH clk = ~clk;
 end
 
 // Reset Generation at start
 initial
 begin
-	Reset = FALSE;
-	repeat (IDLE_CLOCKS) @(negedge Clock);
-	Reset = TRUE;
+	reset_n = FALSE;
+	repeat (IDLE_CLOCKS) @(negedge clk);
+	reset_n = TRUE;
 end
 
 initial
 begin : stimulus
-
+g1 = new();
 $stop();
 end : stimulus
 
@@ -45,7 +49,5 @@ end
 endmodule: top
 
 
-
-endmodule
     
         

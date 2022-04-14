@@ -1,4 +1,5 @@
-covergroup bids22(@posedge clk);
+program cgroups
+covergroup bids22cg1(@posedge clk);
     option.per_instance=1;
     
     coverpoint C_data{
@@ -108,3 +109,4 @@ covergroup bids22(@posedge clk);
     }
 
 endgroup
+endprogram
