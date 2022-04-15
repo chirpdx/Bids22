@@ -18,6 +18,17 @@ bids22 BIDDUV(BusInst);
 
 //bids22cg1 g1;
 
+covergroup internal_reg_with_input@(posedge clk);
+    option.per_instance=1;
+    //coverpoint BusInst.C_op;
+	//coverpoint BIDDUV.unlock_recognized;
+    cross BIDDUV.unlock_recognized, BusInst.C_op;
+	
+endgroup
+
+internal_reg_with_input	input_reg_group1	= new();	
+
+
 // Clock Generation of CLOCK_CYCLE Period
 initial
 begin
