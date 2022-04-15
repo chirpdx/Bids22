@@ -1,5 +1,6 @@
-program cgroups
-covergroup bids22cg1(@posedge clk);
+program cgroups(bids22inf.bids22arch bid);
+
+covergroup bids22cg1@(posedge clk);
     option.per_instance=1;
     
     coverpoint C_data{

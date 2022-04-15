@@ -70,7 +70,7 @@ begin
 	else
 	begin
 
-		if(bid.c_start==0)
+		if(bid.C_start==0)
 			begin
 				present_state<=ResultSt; //if c_start becomes zero then you will go to result state
 			end

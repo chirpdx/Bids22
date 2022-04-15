@@ -14,9 +14,9 @@ parameter IDLE_CLOCKS = 50;
 // Instantiate Module
 bids22inf BusInst(.*);
 bids22 BIDDUV(BusInst);
-cgroups cgInst(.*);
+//cgroups cgInst(BusInst);
 
-bids22cg1 g1;
+//bids22cg1 g1;
 
 // Clock Generation of CLOCK_CYCLE Period
 initial
@@ -35,8 +35,15 @@ end
 
 initial
 begin : stimulus
-g1 = new();
-$stop();
+	//g1 = new();
+	repeat (1000)
+	begin
+		BusInst.C_data = $random();
+		BusInst.C_op = $random();
+		@(negedge clk);
+		
+	end
+	$stop();
 end : stimulus
 
 
