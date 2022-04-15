@@ -32,7 +32,7 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 					} Opcode;
 
 logic unlock_recognized; // Lock Flag
-logic downtimer;
+logic [31:0] downtimer;
 function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
 
 	//	Checking for duplicate bids
@@ -284,6 +284,8 @@ begin
 			WaitSt:
 				begin
 				bid.roundOver = 0;
+				{xcurr, ycurr, zcurr} = '0;
+				{bid.X_win, bid.Y_win, bid.Z_win} = '0;
 				if(bid.C_start == 1)
 					next_state = LockSt;
 				else if(bid.C_start == 0 && bid.C_op == Unlock)
