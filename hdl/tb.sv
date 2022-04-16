@@ -1,3 +1,16 @@
+//////////////////////////////////////////////////////////////
+// tb.sv - Contains instantiation of Interface, Reference module,
+//			and Covergroups.
+//			Random Stimulus generation task, clk and reset gen.
+//			Three Covergroups which access internal design flags,
+//			state of fsm, and some register values.
+//
+// Author:	        Chirag Chaudhari (chir@pdx.edu)
+// 					Amogh Morey
+// Last Modified:	15-Apr-2022
+// 
+//
+////////////////////////////////////////////////////////////////
 //`define DEBUG
 module top;
 
@@ -14,9 +27,8 @@ bids22inf BusInst(.*);		// Instantiate Interface
 bids22 BIDDUV(BusInst);		// Instantiate Reference module
 cgroups cgInst(BusInst);	// Instantiate Covergroups module
 
-// Covergroup in here to access internal regs from ref module
+// Covergroup in here to access internal regs/flags from design module
 covergroup internal_reg_with_input@(posedge clk);
-    option.per_instance=1;
 
     //coverpoint BusInst.C_op;
 	lockflag: coverpoint BIDDUV.unlock_recognized;
@@ -30,12 +42,39 @@ covergroup internal_reg_with_input@(posedge clk);
 		bins transition_noticed[] = (0,1 => 0,1);
 	}
 
+endgroup
+
+// Covergroup for errors with checking internal flags and regs
+covergroup internal_reg_op_errors@(posedge clk);
+
+	// invalid request (mask doesn’t allow) when round is active
+	xerrmask: coverpoint BusInst.X_err iff(BIDDUV.mask[0] === 0 && BusInst.C_start === 1){
+		bins X_errNotAllowed = {3};
+	}
+
+	yerrmask: coverpoint BusInst.Y_err iff(BIDDUV.mask[1] === 0 && BusInst.C_start === 1){
+		bins Y_errNotAllowed = {3};
+	}
+
+	zerrmask: coverpoint BusInst.Z_err iff(BIDDUV.mask[2] === 0 && BusInst.C_start === 1){
+		bins Z_errNotAllowed = {3};
+	}
+
+	// Separate bin for err 2, i.e already unlocked
+	errunlock : coverpoint BusInst.err iff(BIDDUV.unlock_recognized === 1 && BusInst.C_op === 1){
+		bins alreadyunlockerr = {2};
+	}
+
+	// Cannot assert c_start when unlocked, separately covered
+	errroundstart : coverpoint BusInst.err iff(BIDDUV.unlock_recognized === 1 && BusInst.C_start === 1){
+		bins alreadyunlockerr = {4};
+	}
 	
 endgroup
 
 typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, WaitSt, TimerwaitSt, default_case} state;
 
-// fsm coverage done using functiona coverage, only for 1 transitions
+// fsm coverage done using functiona coverage, only for 1 transition length
 covergroup fsm_group@(posedge clk);
 
     fsm_transition: coverpoint BIDDUV.present_state{
@@ -51,6 +90,7 @@ endgroup
 
 internal_reg_with_input	input_reg_group1	= new();	
 fsm_group				fsm_group1			= new();	
+internal_reg_op_errors	err_subset_group1	= new();	
 
 
 // Clock Generation of CLOCK_CYCLE Period
