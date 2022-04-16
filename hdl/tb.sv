@@ -108,9 +108,16 @@ begin
 	reset_n = TRUE;
 end
 
+bit [31:0] runval;
+
 initial
 begin : stimulus
-	repeat(1000000)
+	runval = 32'd1000000;
+	if($value$plusargs ("RUNVAL=%0d", runval))
+		$display("Running simulation for %0d clocks with random stimulus",runval);
+	else
+		$display("Running simulation for default %0d clocks with random stimulus",runval);
+	repeat(runval)
 	begin
 		All_Random_Blind;
 		@(negedge clk);
