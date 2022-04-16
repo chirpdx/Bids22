@@ -10,23 +10,47 @@ localparam CLOCK_WIDTH = CLOCK_CYCLE/2;
 parameter IDLE_CLOCKS = 10;
 
 
+bids22inf BusInst(.*);		// Instantiate Interface
+bids22 BIDDUV(BusInst);		// Instantiate Reference module
+cgroups cgInst(BusInst);	// Instantiate Covergroups module
 
-// Instantiate Module
-bids22inf BusInst(.*);
-bids22 BIDDUV(BusInst);
-//cgroups cgInst(BusInst);
-
-//bids22cg1 g1;
-
+// Covergroup in here to access internal regs from ref module
 covergroup internal_reg_with_input@(posedge clk);
     option.per_instance=1;
+
     //coverpoint BusInst.C_op;
-	//coverpoint BIDDUV.unlock_recognized;
-    cross BIDDUV.unlock_recognized, BusInst.C_op;
+	lockflag: coverpoint BIDDUV.unlock_recognized;
+    lockflagwithopcode: cross lockflag, BusInst.C_op;
+
+	// for Lower 3 bits of mask register
+	maskbits: coverpoint BIDDUV.mask[2:0];
+
+	//transition for lock unlock
+	lockunlocktrans: coverpoint BIDDUV.unlock_recognized{
+		bins transition_noticed[] = (0,1 => 0,1);
+	}
+
 	
 endgroup
 
+typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, WaitSt, TimerwaitSt, default_case} state;
+
+// fsm coverage done using functiona coverage, only for 1 transitions
+covergroup fsm_group@(posedge clk);
+
+    fsm_transition: coverpoint BIDDUV.present_state{
+
+        bins t1 = (UnlockSt => LockSt);
+        bins t2 = (LockSt => ResultSt);
+        bins t3 = (ResultSt => WaitSt);
+        bins t4 = (WaitSt => TimerwaitSt);
+        bins t5 = (TimerwaitSt => WaitSt);
+    }
+
+endgroup
+
 internal_reg_with_input	input_reg_group1	= new();	
+fsm_group				fsm_group1			= new();	
 
 
 // Clock Generation of CLOCK_CYCLE Period
@@ -46,41 +70,7 @@ end
 
 initial
 begin : stimulus
-	//g1 = new();
-	repeat (20)
-	begin
-		BusInst.C_data = 32'h56;
-		BusInst.C_op = 3'h2;
-		BusInst.C_start = 0;
-		@(negedge clk);
-		
-	end
-	BusInst.C_start = 1;
-	@(negedge clk);
-	BusInst.X_bid = 1;
-	BusInst.X_bidAmt = 10;
-	BusInst.Y_bid = 1;
-	BusInst.Y_bidAmt = 20;
-	BusInst.Z_bid = 1;
-	BusInst.Z_bidAmt = 30;
-	@(negedge clk);
-	BusInst.X_bid = 1;
-	BusInst.X_bidAmt = 40;
-	BusInst.Y_bid = 1;
-	BusInst.Y_bidAmt = 50;
-	BusInst.Z_bid = 1;
-	BusInst.Z_bidAmt = 70;
-	@(negedge clk);
-	BusInst.C_start = 0;
-	@(negedge clk);
-	BusInst.C_data = 32'h56;
-	BusInst.C_op = 3'h1;
-	@(negedge clk);
-	BusInst.C_data = 32'h58;
-	BusInst.C_op = 3'h2;
-	@(negedge clk);
-	#1000;
-	repeat(10000)
+	repeat(1000000)
 	begin
 		All_Random_Blind;
 		@(negedge clk);
@@ -88,9 +78,10 @@ begin : stimulus
 	$stop();
 end : stimulus
 
-task All_Random_Blind();
+task All_Random_Blind();		// Random stimulus gen task
 begin
-	{BusInst.X_bid, BusInst.Y_bid}		= $random();
+	BusInst.X_bid		= $random();
+	BusInst.Y_bid		= $random();
 	BusInst.Z_bid		= $random();
 	BusInst.X_retract	= $random();
 	BusInst.Y_retract	= $random();

@@ -316,9 +316,3 @@ begin
 
 end
 endmodule: bids22
-
-//Timer- task - When in Lock state or Result state, trying to Unlock, 
-//All invalid operations, if we try to unlock when c_start==1 ,we should get a invalid operations
-//Key does not match with c_data- Bad key
-//bids either recieve an ack or err
-//Balance of x,y,z, it should we given in Result

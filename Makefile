@@ -4,7 +4,7 @@
 sim_dir := $(shell pwd)/sim/
 source_dir := $(shell pwd)/hdl/
 #sv_files := $(shell find $(source_dir) -name '*.sv')
-sv_files :=  $(source_dir)/interfacebids.sv $(source_dir)/bids22.sv $(source_dir)/tb.sv
+sv_files :=  $(source_dir)/interfacebids.sv $(source_dir)/bids22.sv $(source_dir)/coverage.sv $(source_dir)/tb.sv
 
 top_module = "top"
 
