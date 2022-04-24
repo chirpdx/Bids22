@@ -1,4 +1,5 @@
-interface bids22inf(input logic clk,reset_n);
+interface bids22inf();
+	logic clk,reset_n;
 	logic X_bid, Y_bid, Z_bid, X_retract, Y_retract, Z_retract, C_start;
 	logic [15:0] X_bidAmt, Y_bidAmt, Z_bidAmt;
 	logic [31:0] C_data;
@@ -40,5 +41,24 @@ interface bids22inf(input logic clk,reset_n);
 		output Y_balance, 
 		output Z_balance,
 		output maxBid);
+
+task reset_design();
+begin
+	reset_n = 1'b0;
+	@(negedge clk);
+	@(negedge clk);
+	reset_n = 1'b1;
+	C_start = 1'b0;
+	@(negedge clk);
+end
+endtask
+
+task lock_mode_design(int keyvalue = 32'h0);
+begin
+	C_op = 4'b0010;
+	C_data = keyvalue;
+	@(negedge clk);
+end
+endtask
 
 endinterface

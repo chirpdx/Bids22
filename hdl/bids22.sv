@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////
 
 module bids22(bids22inf.bids22arch bid);
-	parameter integer unlock_key = 33'h0F0F0F0F;
+	parameter integer unlock_key = 32'h0F0F0F0F;
 	
 // Internal Registers
 logic [31:0] X_value, Y_value, Z_value;
@@ -81,6 +81,7 @@ end
 
 always_comb
 begin
+	bid.err = '0;
 	if(bid.reset_n == 0)
 	begin
 		unlock_recognized = 1;
@@ -124,6 +125,7 @@ begin
 						mask = mask;
 						bid_cost = bid_cost;
 						timer = timer;
+						bid.err = '0;
 					end
 					else if(bid.C_op == Unlock)
 					begin
@@ -134,28 +136,41 @@ begin
 						key = bid.C_data;
 						next_state = LockSt;  //needs to check if this works--going to lock
 						downtimer = timer;
+						bid.err = '0;
 					end
 					else if(bid.C_op == LoadX)
 					begin
 						X_value = bid.C_data;
 						xtemp = bid.C_data;
+						bid.err = '0;
 					end
 					else if(bid.C_op == LoadY)
 					begin
 						Y_value = bid.C_data;
 						ytemp = bid.C_data;
+						bid.err = '0;
 					end
 					else if(bid.C_op == LoadZ)
 					begin
 						Z_value = bid.C_data;
 						ztemp = bid.C_data;
+						bid.err = '0;
 					end
 					else if(bid.C_op == SetXYZmask)
+					begin
 						mask = bid.C_data[2:0];
+						bid.err = '0;
+					end
 					else if(bid.C_op == SetTimer)
+					begin
 						timer = bid.C_data;
+						bid.err = '0;
+					end
 					else if(bid.C_op == BidCharge)
+					begin
 						bid_cost = bid.C_data;
+						bid.err = '0;
+					end
 					else
 						bid.err = 100; // invalid operation
 					if(bid.C_start)

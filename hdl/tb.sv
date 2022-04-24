@@ -23,7 +23,7 @@ localparam CLOCK_WIDTH = CLOCK_CYCLE/2;
 parameter IDLE_CLOCKS = 10;
 
 
-bids22inf BusInst(.*);		// Instantiate Interface
+bids22inf BusInst();		// Instantiate Interface
 bids22 BIDDUV(BusInst);		// Instantiate Reference module
 cgroups cgInst(BusInst);	// Instantiate Covergroups module
 
@@ -96,10 +96,11 @@ internal_reg_op_errors	err_subset_group1	= new();
 // Clock Generation of CLOCK_CYCLE Period
 initial
 begin
-	clk = FALSE;
-	forever #CLOCK_WIDTH clk = ~clk;
+	BusInst.clk = FALSE;
+	forever #CLOCK_WIDTH BusInst.clk = ~BusInst.clk;
 end
 
+/*
 // Reset Generation at start
 initial
 begin
@@ -107,12 +108,14 @@ begin
 	repeat (IDLE_CLOCKS) @(negedge clk);
 	reset_n = TRUE;
 end
+*/
 
 bit [31:0] runval;
 
 initial
 begin : stimulus
-	runval = 32'd1000000;
+	runval = 32'd0;
+	BusInst.reset_design();
 	if($value$plusargs ("RUNVAL=%0d", runval))
 		$display("Running simulation for %0d clocks with random stimulus",runval);
 	else
@@ -122,6 +125,8 @@ begin : stimulus
 		All_Random_Blind;
 		@(negedge clk);
 	end
+	
+	BusInst.lock_mode_design(32'h770);
 	$stop();
 end : stimulus
 
