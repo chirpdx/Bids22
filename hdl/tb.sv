@@ -126,7 +126,7 @@ begin : stimulus
 		@(negedge clk);
 	end
 	
-	BusInst.lock_mode_design(32'h770);
+	BusInst.send_ctrl(4'h2, 32'h770);
 	$stop();
 end : stimulus
 

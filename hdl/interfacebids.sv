@@ -42,6 +42,7 @@ interface bids22inf();
 		output Z_balance,
 		output maxBid);
 
+// to enable the design
 task reset_design();
 begin
 	reset_n = 1'b0;
@@ -53,10 +54,11 @@ begin
 end
 endtask
 
-task lock_mode_design(int keyvalue = 32'h0);
+// to drive design into different configurations/modes
+task send_ctrl(int cvalue = 4'h0, int datavalue = 32'h0);
 begin
-	C_op = 4'b0010;
-	C_data = keyvalue;
+	C_op = cvalue;
+	C_data = datavalue;
 	@(negedge clk);
 end
 endtask
