@@ -92,7 +92,6 @@ internal_reg_with_input	input_reg_group1	= new();
 fsm_group				fsm_group1			= new();	
 internal_reg_op_errors	err_subset_group1	= new();	
 
-
 // Clock Generation of CLOCK_CYCLE Period
 initial
 begin
@@ -109,24 +108,27 @@ begin
 	reset_n = TRUE;
 end
 */
-
 bit [31:0] runval;
 
 initial
 begin : stimulus
-	runval = 32'd0;
+	runval = 32'd10000;
 	BusInst.reset_design();
 	if($value$plusargs ("RUNVAL=%0d", runval))
 		$display("Running simulation for %0d clocks with random stimulus",runval);
 	else
 		$display("Running simulation for default %0d clocks with random stimulus",runval);
-	repeat(runval)
-	begin
-		All_Random_Blind;
-		@(negedge clk);
-	end
 	
 	BusInst.send_ctrl(4'h2, 32'h770);
+	
+	repeat(runval)
+	begin
+		//All_Random_Blind;
+		xx_winner;
+		@(negedge BusInst.clk);
+	end
+	
+	#100;
 	$stop();
 end : stimulus
 
@@ -147,10 +149,54 @@ begin
 end
 endtask
 
-`ifdef DEBUG
+//Direct testing stimulus generators
+function byte get_bidamt();
+	bit [1:0] selector1;
+    
+	selector1=$random();
+
+    if(selector1 == 2'b00)
+        return 32'h0;
+    else if(selector1 == 2'b11)
+        return 32'hFFFF;
+    else
+        return $random;
+
+endfunction: get_bidamt
+
+task xx_winner();
+begin
+    BusInst.C_start= 1;
+    repeat(2)
+    begin
+        @(negedge BusInst.clk);
+    end
+    BusInst.X_bid = 1;
+	BusInst.X_bidAmt = get_bidamt();
+    //BusInst.X_bidAmt = $urandom_range(0,65535);
+
+    BusInst.Y_bid = 1;
+    BusInst.Y_bidAmt = get_bidamt();
+
+    BusInst.Z_bid = 1;
+    BusInst.Z_bidAmt = get_bidamt();
+
+    @(negedge BusInst.clk);
+    BusInst.Z_bid = 0;
+    BusInst.Z_bid = 0;
+    BusInst.Z_bid = 0;
+    @(negedge BusInst.clk);
+    BusInst.C_start= 0;
+	
+end
+endtask
+
+//`ifdef DEBUG
 initial
 begin
-	$monitor($time);
+	//$monitor($time," err = %b, C_op = %b, State = %s, roundover =%b", BusInst.err, BusInst.C_op, BIDDUV.present_state, BusInst.Y_win, BusInst.roundOver);
+	$monitor($time," Amount = %b Xwin = %b, Amount =%b Ywin = %b, Amount=%b Zwin = %b",BusInst.X_bidAmt, BusInst.X_win,BusInst.Y_bidAmt, BusInst.Y_win,BusInst.Z_bidAmt,BusInst.Z_win);
 end
-`endif
+//`endif
+
 endmodule: top

@@ -49,7 +49,7 @@ begin
 	@(negedge clk);
 	@(negedge clk);
 	reset_n = 1'b1;
-	C_start = 1'b0;
+	C_start = 1'b0; 
 	@(negedge clk);
 end
 endtask
