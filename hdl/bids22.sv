@@ -33,29 +33,30 @@ enum logic[3:0] {	NoOp 		= 4'b0000,
 
 logic unlock_recognized; // Lock Flag
 logic [31:0] downtimer;
-function max(input logic [15:0] X_bidAmt, input logic [15:0] Y_bidAmt,input logic [15:0] Z_bidAmt);
-
+function max(input logic [15:0] X_bidAmt = 0, input logic [15:0] Y_bidAmt = 0,input logic [15:0] Z_bidAmt = 0);
+begin
 	//	Checking for duplicate bids
-    if(bid.X_bidAmt == bid.Y_bidAmt || bid.X_bidAmt==bid.Z_bidAmt || bid.Y_bidAmt==bid.Z_bidAmt)
+	$display("%d, %d, %d", X_bidAmt, Y_bidAmt, Z_bidAmt);
+    if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt || Y_bidAmt==Z_bidAmt)
 	begin
 		bid.err=3'b101; // Duplicate
 	end
-	else if(bid.X_bidAmt > bid.Y_bidAmt && bid.X_bidAmt > bid.Z_bidAmt)
+	else if(X_bidAmt > Y_bidAmt && X_bidAmt > Z_bidAmt)
     begin
-        bid.maxBid=bid.X_bidAmt;
+        bid.maxBid=X_bidAmt;
 		bid.X_win=1;
     end
-	else if(bid.Y_bidAmt > bid.X_bidAmt && bid.Y_bidAmt > bid.Z_bidAmt)
+	else if(Y_bidAmt > X_bidAmt && Y_bidAmt > Z_bidAmt)
     begin
-        bid.maxBid=bid.Y_bidAmt;
+        bid.maxBid=Y_bidAmt;
 		bid.Y_win=1;
     end
-	else if(bid.Z_bidAmt > bid.X_bidAmt && bid.Z_bidAmt > bid.Y_bidAmt)
+	else if(Z_bidAmt > X_bidAmt && Z_bidAmt > Y_bidAmt)
     begin
         bid.maxBid=bid.Z_bidAmt;
 		bid.Z_win=1;
     end
-
+end
 endfunction
 
 typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, WaitSt, TimerwaitSt, default_case} state;
@@ -113,6 +114,7 @@ begin
 		case(present_state)
 			UnlockSt:  
 				begin
+					next_state = UnlockSt;
 					if(bid.C_op == NoOp)
 					begin
 						key <= key;
@@ -187,6 +189,7 @@ begin
 								xcurr = bid.X_bidAmt;
 								xtemp = xtemp - bid_cost;
 								bid.X_ack = 1;
+								bid.X_err = 2'b00;
 							end
 							else
 							begin
@@ -195,7 +198,10 @@ begin
 								bid.X_ack = 0;
 							end
 							else if(mask[0] == 1 && bid.X_bid == 0)
+							begin
 								xcurr = xcurr;
+								bid.X_err = 2'b00;
+							end
 							else if(mask[0] == 0 && bid.X_bid == 1)
 							begin
 								bid.X_err = 2'b11;
@@ -213,6 +219,7 @@ begin
 								ycurr = bid.Y_bidAmt;
 								ytemp = ytemp - bid_cost;
 								bid.Y_ack = 1;
+								bid.Y_err = 2'b00;
 							end
 							else
 							begin
@@ -221,7 +228,10 @@ begin
 								bid.Y_ack = 0;
 							end
 							else if(mask[1] == 1 && bid.Y_bid == 0)
+							begin
 								ycurr = ycurr;
+								bid.Y_err = 2'b00;
+							end
 							else if(mask[1] == 0 && bid.Y_bid == 1)
                        		begin
 								bid.Y_err = 2'b11;
@@ -241,6 +251,7 @@ begin
 								zcurr = bid.Z_bidAmt;
 								ztemp = ztemp - bid_cost;
                                 bid.Z_ack = 1;
+								bid.Z_err = 2'b00;
 							end
 							else
 							begin
@@ -249,7 +260,10 @@ begin
                                 bid.Z_ack = 0;
 							end
 						else if(mask[2] == 1 && bid.Z_bid == 0)
+						begin
 							zcurr = zcurr;
+							bid.Z_err = 2'b00;
+						end
 						else if(mask[2] == 0 && bid.Z_bid == 1)
                         begin
 							bid.Z_err = 2'b11;
@@ -292,9 +306,14 @@ begin
 				end
 			ResultSt:
 				begin
-				bid.roundOver = 1;
-				max(xcurr,ycurr,zcurr);
-				next_state = WaitSt;
+					if(bid.C_start == 1)
+						next_state = LockSt;
+					else
+					begin
+						bid.roundOver = 1;
+						max(xcurr,ycurr,zcurr);
+						next_state = WaitSt;
+					end
 				end
 			WaitSt:
 				begin

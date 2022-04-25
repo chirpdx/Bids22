@@ -11,7 +11,7 @@
 // 
 //
 ////////////////////////////////////////////////////////////////
-//`define DEBUG
+`define DEBUG
 module top;
 
 logic clk, reset_n;
@@ -123,12 +123,98 @@ begin : stimulus
 	repeat(runval)
 	begin
 		All_Random_Blind;
-		@(negedge clk);
+		@(negedge BusInst.clk);
 	end
+	$display("Running random done");
+	BusInst.send_ctrl();
+	$display("Stopping");
+	BusInst.reset_design();
+	BusInst.send_ctrl();
+
+	load_participant_reg();
+	lock_design();
+	start_round();
+	bid_when_lock();
+	bid_when_lock();
+	bid_when_lock();
+	bid_when_lock();
+	stop_round();
 	
-	BusInst.send_ctrl(4'h2, 32'h770);
+	#1000;
 	$stop();
 end : stimulus
+
+task load_participant_reg();
+begin
+	automatic bit [31:0] val = '0;
+	val = 32'h10000;
+	BusInst.send_ctrl(4'h3, val);
+	val = 32'h20000;
+	BusInst.send_ctrl(4'h4, val);
+	val = 32'h30000;
+	BusInst.send_ctrl(4'h5, val);
+end
+endtask
+
+task lock_design();
+begin
+	automatic bit [31:0] val = '0;
+	val = 32'h790;
+	BusInst.send_ctrl(4'h2, val);
+end
+endtask
+
+task start_round();
+begin
+	BusInst.C_start = 1'b1;
+end
+endtask
+
+task stop_round();
+begin
+	BusInst.C_start = 1'b0;
+end
+endtask
+
+task bid_when_lock();
+begin
+	automatic bit [15:0] val = '0;
+	automatic logic [1:0] bidwho;
+	bidwho = $random();
+	val = 16'h750;
+	if(bidwho == 2'b00)
+	begin
+		BusInst.X_bid = 1'b1;
+		BusInst.X_bidAmt = val;
+	end
+	else if(bidwho == 2'b01)
+	begin
+		BusInst.Y_bid = 1'b1;
+		BusInst.Y_bidAmt = val;
+	end
+	else if(bidwho == 2'b10)
+	begin
+		BusInst.Z_bid = 1'b1;
+		BusInst.Z_bidAmt = val;
+	end
+	else
+	begin
+		BusInst.X_bid = 1'b1;
+		BusInst.X_bidAmt = val;
+		BusInst.Y_bid = 1'b1;
+		BusInst.Y_bidAmt = val;
+		BusInst.Z_bid = 1'b1;
+		BusInst.Z_bidAmt = val;
+	end
+	@(negedge BusInst.clk);
+	BusInst.X_bid = 1'b0;
+	BusInst.X_bidAmt = '0;
+	BusInst.Y_bid = 1'b0;
+	BusInst.Y_bidAmt = '0;
+	BusInst.Z_bid = 1'b0;
+	BusInst.Z_bidAmt = '0;
+end
+endtask
 
 task All_Random_Blind();		// Random stimulus gen task
 begin
@@ -150,7 +236,13 @@ endtask
 `ifdef DEBUG
 initial
 begin
-	$monitor($time);
+	//$monitor($time," err = %b, C_op = %b, State = %s, roundover =%b", BusInst.err, BusInst.C_op, BIDDUV.present_state, BusInst.Y_win, BusInst.roundOver);
+	$monitor($time," Xwin = %b, Ywin = %b, Zwin = %b", BusInst.X_win, BusInst.Y_win, BusInst.Z_win);
+end
+initial
+begin
+	$monitor($time," err = %b, C_op = %b, State = %s, roundover =%b", BusInst.err, BusInst.C_op, BIDDUV.present_state, BusInst.roundOver);
+	//$monitor($time," Xwin = %b, Ywin = %b, Zwin = %b", BusInst.X_win, BusInst.Y_win, BusInst.Z_win);
 end
 `endif
 endmodule: top

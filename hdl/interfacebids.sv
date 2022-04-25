@@ -60,6 +60,8 @@ begin
 	C_op = cvalue;
 	C_data = datavalue;
 	@(negedge clk);
+	C_op = '0;
+	C_data = '0;
 end
 endtask
 
