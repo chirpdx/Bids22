@@ -150,9 +150,23 @@ begin : stimulus
 		end
 		32'd2:begin
 			$display("Second extra task");
+			repeat(taskrep)
+			begin
+				tryunlock();
+			end
 		end
 		32'd3:begin
 			$display("Third extra task");
+			change_mask_also();
+		end
+		32'd4:begin
+			$display("Third extra task");
+			repeat(taskrep)
+			begin
+				change_mask_also();
+				bidmultiple();
+				tryunlock();
+			end
 		end
 		default: $display("No extra tasks");
 	endcase
@@ -174,6 +188,25 @@ begin
 		BusInst.bid_when_lock();
 	end
 	BusInst.stop_round();
+end
+endtask
+
+task tryunlock();
+begin
+	BusInst.load_participant_reg();
+	BusInst.lock_design();
+	#100;
+	BusInst.unlock_design();
+	#100;
+end
+endtask
+
+
+task change_mask_also();
+begin
+	BusInst.load_participant_reg();
+	BusInst.setmask();
+	#100;
 end
 endtask
 

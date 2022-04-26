@@ -80,8 +80,24 @@ endtask
 task lock_design();
 begin
 	automatic bit [31:0] val = '0;
-	val = 32'h790;
+	val = get_bidamt();
 	send_ctrl(4'h2, val);
+end
+endtask
+
+task unlock_design();
+begin
+	automatic bit [31:0] val = '0;
+	val = get_bidamt();
+	send_ctrl(4'h1, val);
+end
+endtask
+
+task setmask();
+begin
+	automatic bit [31:0] val = '0;
+	val = get_bidamt();
+	send_ctrl(4'h6, val);
 end
 endtask
 
