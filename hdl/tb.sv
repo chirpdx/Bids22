@@ -11,7 +11,7 @@
 // 
 //
 ////////////////////////////////////////////////////////////////
-`define DEBUG
+//`define DEBUG
 module top;
 
 logic clk, reset_n;
@@ -111,10 +111,13 @@ end
 */
 
 bit [31:0] runval;
+bit [31:0] roundval;
+bit [31:0] taskval;
+bit [31:0] taskrep;
 
 initial
 begin : stimulus
-	runval = 32'd0;
+	runval = 32'd100000;
 	BusInst.reset_design();
 	if($value$plusargs ("RUNVAL=%0d", runval))
 		$display("Running simulation for %0d clocks with random stimulus",runval);
@@ -122,127 +125,66 @@ begin : stimulus
 		$display("Running simulation for default %0d clocks with random stimulus",runval);
 	repeat(runval)
 	begin
-		All_Random_Blind;
+		BusInst.All_Random_Blind;
 		@(negedge BusInst.clk);
 	end
-	$display("Running random done");
+	//$display("Running random done");
 	BusInst.send_ctrl();
-	$display("Stopping");
+	//$display("Stopping");
 	BusInst.reset_design();
 	BusInst.send_ctrl();
+	taskval = 32'd0;
+	taskrep = 32'd1;
+	if($value$plusargs ("TASKREP=%0d", taskrep))
+		$display("Running simulation for %0d repetition",taskrep);
+	if($value$plusargs ("TASKVAL=%0d", taskval))
+		$display("Running simulation for %0d task as well with random stimulus",taskval);
 
-	load_participant_reg();
-	lock_design();
-	start_round();
-	bid_when_lock();
-	bid_when_lock();
-	bid_when_lock();
-	bid_when_lock();
-	stop_round();
-	
+	case(taskval)
+		32'd1:begin
+			$display("First extra tasks");
+			repeat(taskrep)
+			begin
+				bidmultiple();
+			end
+		end
+		32'd2:begin
+			$display("Second extra task");
+		end
+		32'd3:begin
+			$display("Third extra task");
+		end
+		default: $display("No extra tasks");
+	endcase
+
 	#1000;
 	$stop();
 end : stimulus
 
-task load_participant_reg();
+task bidmultiple();
 begin
-	automatic bit [31:0] val = '0;
-	val = 32'h10000;
-	BusInst.send_ctrl(4'h3, val);
-	val = 32'h20000;
-	BusInst.send_ctrl(4'h4, val);
-	val = 32'h30000;
-	BusInst.send_ctrl(4'h5, val);
-end
-endtask
-
-task lock_design();
-begin
-	automatic bit [31:0] val = '0;
-	val = 32'h790;
-	BusInst.send_ctrl(4'h2, val);
-end
-endtask
-
-task start_round();
-begin
-	BusInst.C_start = 1'b1;
-end
-endtask
-
-task stop_round();
-begin
-	BusInst.C_start = 1'b0;
-end
-endtask
-
-task bid_when_lock();
-begin
-	automatic bit [15:0] val = '0;
-	automatic logic [1:0] bidwho;
-	bidwho = $random();
-	val = 16'h750;
-	if(bidwho == 2'b00)
+	roundval = 32'd3;
+	BusInst.load_participant_reg();
+	BusInst.lock_design();
+	BusInst.start_round();
+	if($value$plusargs ("ROUNDVAL=%0d", roundval))  //how many biddings in one round
+		$display("Bidding for %0d clocks",roundval);
+	repeat(roundval)
 	begin
-		BusInst.X_bid = 1'b1;
-		BusInst.X_bidAmt = val;
+		BusInst.bid_when_lock();
 	end
-	else if(bidwho == 2'b01)
-	begin
-		BusInst.Y_bid = 1'b1;
-		BusInst.Y_bidAmt = val;
-	end
-	else if(bidwho == 2'b10)
-	begin
-		BusInst.Z_bid = 1'b1;
-		BusInst.Z_bidAmt = val;
-	end
-	else
-	begin
-		BusInst.X_bid = 1'b1;
-		BusInst.X_bidAmt = val;
-		BusInst.Y_bid = 1'b1;
-		BusInst.Y_bidAmt = val;
-		BusInst.Z_bid = 1'b1;
-		BusInst.Z_bidAmt = val;
-	end
-	@(negedge BusInst.clk);
-	BusInst.X_bid = 1'b0;
-	BusInst.X_bidAmt = '0;
-	BusInst.Y_bid = 1'b0;
-	BusInst.Y_bidAmt = '0;
-	BusInst.Z_bid = 1'b0;
-	BusInst.Z_bidAmt = '0;
-end
-endtask
-
-task All_Random_Blind();		// Random stimulus gen task
-begin
-	BusInst.X_bid		= $random();
-	BusInst.Y_bid		= $random();
-	BusInst.Z_bid		= $random();
-	BusInst.X_retract	= $random();
-	BusInst.Y_retract	= $random();
-	BusInst.Z_retract	= $random();
-	BusInst.C_start		= $random();
-	BusInst.X_bidAmt	= $random();
-	BusInst.Y_bidAmt	= $random();
-	BusInst.Z_bidAmt	= $random();
-	BusInst.C_data		= $random();
-	BusInst.C_op		= $random();
+	BusInst.stop_round();
 end
 endtask
 
 `ifdef DEBUG
 initial
 begin
-	//$monitor($time," err = %b, C_op = %b, State = %s, roundover =%b", BusInst.err, BusInst.C_op, BIDDUV.present_state, BusInst.Y_win, BusInst.roundOver);
 	$monitor($time," Xwin = %b, Ywin = %b, Zwin = %b", BusInst.X_win, BusInst.Y_win, BusInst.Z_win);
 end
 initial
 begin
 	$monitor($time," err = %b, C_op = %b, State = %s, roundover =%b", BusInst.err, BusInst.C_op, BIDDUV.present_state, BusInst.roundOver);
-	//$monitor($time," Xwin = %b, Ywin = %b, Zwin = %b", BusInst.X_win, BusInst.Y_win, BusInst.Z_win);
 end
 `endif
 endmodule: top

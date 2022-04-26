@@ -65,4 +65,109 @@ begin
 end
 endtask
 
+task load_participant_reg();
+begin
+	automatic bit [31:0] val = '0;
+	val = 32'h10000;
+	send_ctrl(4'h3, val);
+	val = 32'h20000;
+	send_ctrl(4'h4, val);
+	val = 32'h30000;
+	send_ctrl(4'h5, val);
+end
+endtask
+
+task lock_design();
+begin
+	automatic bit [31:0] val = '0;
+	val = 32'h790;
+	send_ctrl(4'h2, val);
+end
+endtask
+
+task start_round();
+begin
+	C_start = 1'b1;
+end
+endtask
+
+task stop_round();
+begin
+	C_start = 1'b0;
+end
+endtask
+
+task All_Random_Blind();		// Random stimulus gen task
+begin
+	X_bid		= $random();
+	Y_bid		= $random();
+	Z_bid		= $random();
+	X_retract	= $random();
+	Y_retract	= $random();
+	Z_retract	= $random();
+	C_start		= $random();
+	X_bidAmt	= $random();
+	Y_bidAmt	= $random();
+	Z_bidAmt	= $random();
+	C_data		= $random();
+	C_op		= $random();
+end
+endtask
+
+task bid_when_lock();
+begin
+	automatic bit [15:0] val = '0;
+	automatic logic [1:0] bidwho;
+	bidwho = $random();
+	val = get_bidamt();
+	if(bidwho == 2'b00)
+	begin
+		X_bid = 1'b1;
+		X_bidAmt = val;
+	end
+	else if(bidwho == 2'b01)
+	begin
+		Y_bid = 1'b1;
+		Y_bidAmt = val;
+	end
+	else if(bidwho == 2'b10)
+	begin
+		Z_bid = 1'b1;
+		Z_bidAmt = val;
+	end
+	else
+	begin
+		X_bid = 1'b1;
+		X_bidAmt = get_bidamt();
+		Y_bid = 1'b1;
+		Y_bidAmt = get_bidamt();
+		Z_bid = 1'b1;
+		Z_bidAmt = get_bidamt();
+	end
+	@(negedge clk);
+	X_bid = 1'b0;
+	X_bidAmt = '0;
+	Y_bid = 1'b0;
+	Y_bidAmt = '0;
+	Z_bid = 1'b0;
+	Z_bidAmt = '0;
+end
+endtask
+
+function bit[15:0] get_bidamt();
+	bit [1:0] selector1;
+    
+	selector1=$random();
+
+    if(selector1 == 2'b00)
+        return 32'h0;
+    else if(selector1 == 2'b11)
+        return 32'hFFFF;
+    else
+        return $random;
+
+endfunction: get_bidamt
+
+
+
 endinterface

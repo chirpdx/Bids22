@@ -36,8 +36,8 @@ logic [31:0] downtimer;
 function max(input logic [15:0] X_bidAmt = 0, input logic [15:0] Y_bidAmt = 0,input logic [15:0] Z_bidAmt = 0);
 begin
 	//	Checking for duplicate bids
-	$display("%d, %d, %d", X_bidAmt, Y_bidAmt, Z_bidAmt);
-    if(X_bidAmt == Y_bidAmt || X_bidAmt==Z_bidAmt || Y_bidAmt==Z_bidAmt)
+	//$display("%d, %d, %d", X_bidAmt, Y_bidAmt, Z_bidAmt);
+    if((X_bidAmt == Y_bidAmt && bid.X_bid == 1 && bid.Y_bid == 1) || (X_bidAmt==Z_bidAmt && bid.X_bid == 1 && bid.Z_bid == 1) || (Y_bidAmt==Z_bidAmt && bid.Y_bid == 1 && bid.Z_bid == 1))
 	begin
 		bid.err=3'b101; // Duplicate
 	end
@@ -183,6 +183,7 @@ begin
 				begin
 					if(bid.C_start == 1)	// round start
 					begin
+						next_state = LockSt;
               			if(mask[0] == 1 && bid.X_bid == 1)
 							if((xtemp - bid.X_bidAmt - bid_cost) >= 0)
 							begin
