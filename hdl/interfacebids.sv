@@ -97,6 +97,7 @@ task setmask();
 begin
 	automatic bit [31:0] val = '0;
 	val = get_bidamt();
+	$display("mask setting = %b", val[2:0]);
 	send_ctrl(4'h6, val);
 end
 endtask

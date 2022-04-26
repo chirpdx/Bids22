@@ -28,7 +28,7 @@ bids22 BIDDUV(BusInst);		// Instantiate Reference module
 cgroups cgInst(BusInst);	// Instantiate Covergroups module
 
 // Covergroup in here to access internal regs/flags from design module
-covergroup internal_reg_with_input@(posedge clk);
+covergroup internal_reg_with_input@(posedge BusInst.clk);
 
     //coverpoint BusInst.C_op;
 	lockflag: coverpoint BIDDUV.unlock_recognized;
@@ -45,7 +45,7 @@ covergroup internal_reg_with_input@(posedge clk);
 endgroup
 
 // Covergroup for errors with checking internal flags and regs
-covergroup internal_reg_op_errors@(posedge clk);
+covergroup internal_reg_op_errors@(posedge BusInst.clk);
 
 	// invalid request (mask doesn’t allow) when round is active
 	xerrmask: coverpoint BusInst.X_err iff(BIDDUV.mask[0] === 0 && BusInst.C_start === 1){
@@ -75,7 +75,7 @@ endgroup
 typedef enum logic[2:0] {UnlockSt, LockSt, ResultSt, WaitSt, TimerwaitSt, default_case} state;
 
 // fsm coverage done using functiona coverage, only for 1 transition length
-covergroup fsm_group@(posedge clk);
+covergroup fsm_group@(posedge BusInst.clk);
 
     fsm_transition: coverpoint BIDDUV.present_state{
 
@@ -100,15 +100,6 @@ begin
 	forever #CLOCK_WIDTH BusInst.clk = ~BusInst.clk;
 end
 
-/*
-// Reset Generation at start
-initial
-begin
-	reset_n = FALSE;
-	repeat (IDLE_CLOCKS) @(negedge clk);
-	reset_n = TRUE;
-end
-*/
 
 bit [31:0] runval;
 bit [31:0] roundval;
@@ -157,7 +148,10 @@ begin : stimulus
 		end
 		32'd3:begin
 			$display("Third extra task");
-			change_mask_also();
+			repeat(taskrep)
+			begin
+				change_mask_also();
+			end
 		end
 		32'd4:begin
 			$display("Third extra task");
@@ -204,6 +198,7 @@ endtask
 
 task change_mask_also();
 begin
+	BusInst.reset_design();
 	BusInst.load_participant_reg();
 	BusInst.setmask();
 	#100;

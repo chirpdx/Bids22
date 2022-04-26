@@ -181,6 +181,7 @@ begin
 				end
 			LockSt:
 				begin
+					unlock_recognized = 1'b0;
 					if(bid.C_start == 1)	// round start
 					begin
 						next_state = LockSt;
@@ -308,7 +309,10 @@ begin
 			ResultSt:
 				begin
 					if(bid.C_start == 1)
+					begin
 						next_state = LockSt;
+						unlock_recognized = 1'b0;
+					end
 					else
 					begin
 						bid.roundOver = 1;
@@ -326,7 +330,10 @@ begin
 				else if(bid.C_start == 0 && bid.C_op == Unlock)
 					begin
 						if(key === bid.C_data)
+						begin
 							next_state = UnlockSt;
+							unlock_recognized = 1'b1;
+						end
 						else
 						begin
 							next_state = TimerwaitSt;
@@ -345,7 +352,10 @@ begin
 					else
 						next_state = TimerwaitSt;
 				end
-			default_case: next_state = UnlockSt;
+			default_case: begin
+				next_state = UnlockSt;
+				unlock_recognized = 1'b1;
+			end
 		endcase
 	end
 
